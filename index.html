@@ -27,7 +27,12 @@
         #reveal-overlay { display: none; background: rgba(240, 240, 240, 0.98); z-index: 10000; }
         
         .dimension-tag { border: 1px solid #000; font-size: 9px; font-weight: bold; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
-        input, textarea { font-size: 16px !important; color: #000; } 
+        input, textarea { font-size: 16px !important; color: #000; background: #fff; } 
+        
+        /* Message Styles */
+        .msg-user { background-color: #00FF66; border: 2px solid #000; font-weight: 700; box-shadow: 2px 2px 0px #000; }
+        .msg-ai { background-color: #fff; border: 1px solid #ddd; font-style: italic; color: #000; }
+        .msg-error { background-color: #fee2e2; border: 1px dashed #ef4444; color: #991b1b; font-size: 11px; font-weight: bold; margin: 10px 0; padding: 12px; border-radius: 12px; width: 100%; }
     </style>
 </head>
 <body>
@@ -38,7 +43,7 @@
         <div id="loading-view">
             <div class="text-center p-8 bg-white bento-border rounded-3xl max-w-xs w-full">
                 <div class="heading-font text-2xl font-bold uppercase italic animate-pulse mb-2">Connecting...</div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6">The Collective Concierge</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 uppercase">The Collective Concierge</p>
                 <div id="loading-timeout-msg" class="hidden">
                     <button onclick="showOverlay('setup-view')" class="w-full bg-black text-white py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest">Manual Setup</button>
                 </div>
@@ -47,15 +52,15 @@
 
         <div id="reveal-overlay">
             <div class="text-center max-w-sm">
-                <div class="heading-font text-4xl font-bold uppercase italic mb-4 leading-none text-black">Vibe Check <br/>Complete.</div>
-                <p class="text-sm italic text-gray-600 mb-8 font-medium">A high-conviction alignment has been identified.</p>
+                <div class="heading-font text-4xl font-bold uppercase italic mb-4 leading-none text-black text-center">Vibe Check <br/>Complete.</div>
+                <p class="text-sm italic text-gray-600 mb-8 font-medium text-center">A high-conviction alignment has been identified.</p>
                 <button onclick="dismissReveal()" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">Enter the Collection</button>
             </div>
         </div>
 
         <div id="error-view" class="hidden">
             <div class="max-w-md w-full bento-border bg-white p-8 rounded-3xl text-center">
-                <div class="heading-font text-3xl font-bold text-red-500 uppercase italic mb-4">Cloud Error</div>
+                <div class="heading-font text-3xl font-bold text-red-500 uppercase italic mb-4">Sync Error</div>
                 <div id="error-details" class="bg-red-50 p-4 rounded-xl font-mono text-[10px] text-red-800 mb-6 break-all">Initializing...</div>
                 <button onclick="localStorage.clear(); location.reload();" class="w-full bg-black text-white py-4 rounded-xl font-bold uppercase text-xs shadow-[4px_4px_0px_#00FF66]">Reset All & Restart</button>
             </div>
@@ -70,15 +75,17 @@
                 <div class="space-y-4">
                     <div>
                         <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Gemini API Key</label>
-                        <input type="password" id="setup-gemini-key" placeholder="AI Studio Key..." class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black bg-white">
+                        <input type="password" id="setup-gemini-key" placeholder="Paste Gemini Key..." class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black">
                     </div>
                     <div>
                         <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Firebase Config</label>
-                        <textarea id="setup-firebase-config" rows="4" placeholder='Paste { ... } object' class="w-full border-2 border-black rounded-xl p-3 text-xs font-mono focus:outline-none text-black bg-white"></textarea>
+                        <textarea id="setup-firebase-config" rows="4" placeholder='Paste { "apiKey": "..." } object' class="w-full border-2 border-black rounded-xl p-3 text-xs font-mono focus:outline-none text-black"></textarea>
                     </div>
                     <button onclick="saveSetup()" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all">
                         Initialize App
                     </button>
+                    <button id="test-connection-btn" onclick="testConnection()" class="w-full bg-gray-100 text-gray-500 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest mt-2 border border-gray-200">Test Connection</button>
+                    <button onclick="showOverlay('none')" class="w-full text-[9px] font-bold uppercase text-gray-400 mt-4 underline">Back to App</button>
                 </div>
             </div>
         </div>
@@ -96,16 +103,16 @@
                     <form id="profile-form" class="space-y-4 text-left">
                         <div>
                             <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Full Name</label>
-                            <input type="text" id="p-name" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black bg-white">
+                            <input type="text" id="p-name" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black">
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Age</label>
-                                <input type="number" id="p-age" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black bg-white">
+                                <input type="number" id="p-age" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black">
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Occupation</label>
-                                <input type="text" id="p-job" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black bg-white">
+                                <input type="text" id="p-job" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black">
                             </div>
                         </div>
                         <button type="submit" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all mt-4">
@@ -122,7 +129,7 @@
                         <div class="heading-font text-xl font-bold tracking-tighter uppercase italic text-left text-black">
                             the <span class="bg-black text-white px-1">collective.</span>
                         </div>
-                        <p id="user-display-name" class="text-[8px] font-bold uppercase tracking-widest text-gray-400 mt-1 italic text-left leading-none">Syncing...</p>
+                        <p id="user-display-name" class="text-[8px] font-bold uppercase tracking-widest text-gray-400 mt-1 italic text-left leading-none tracking-tighter">Syncing...</p>
                     </div>
                     <div class="flex gap-1 items-center">
                         <button onclick="showOverlay('setup-view')" class="p-1.5 border-2 border-black rounded-lg bg-white shadow-[2px_2px_0px_#000] active:translate-y-0">
@@ -135,14 +142,14 @@
 
                 <div class="flex-1 flex flex-col md:grid md:grid-cols-12 md:gap-8 overflow-hidden">
                     <!-- Sidebar -->
-                    <div id="soul-sidebar" class="hidden md:block md:col-span-4 space-y-4 mb-4">
+                    <div id="soul-sidebar" class="hidden md:block md:col-span-4 space-y-4 mb-4 overflow-y-auto">
                         <div class="bento-border bg-white rounded-2xl p-4">
                             <h2 class="heading-font text-xs font-bold uppercase italic mb-3 text-black">Soul Profile</h2>
                             <div id="vibe-tags" class="flex flex-wrap gap-1 mb-3"></div>
-                            <p id="ai-deduction" class="text-[10px] italic leading-relaxed text-gray-500 mb-4 text-left">Observing behavior...</p>
+                            <p id="ai-deduction" class="text-[10px] italic leading-relaxed text-gray-500 mb-4 text-left">Waiting for first nuance...</p>
                             <div class="space-y-1 mb-4 border-t border-gray-100 pt-3 text-left">
-                                <div class="flex justify-between items-center"><span class="text-[9px] font-bold text-black">Comm</span><span id="dim-comm" class="dimension-tag text-black">...</span></div>
-                                <div class="flex justify-between items-center my-1"><span class="text-[9px] font-bold text-black">Energy</span><span id="dim-energy" class="dimension-tag text-black">...</span></div>
+                                <div class="flex justify-between items-center"><span class="text-[9px] font-bold text-black uppercase">Comm</span><span id="dim-comm" class="dimension-tag text-black">...</span></div>
+                                <div class="flex justify-between items-center my-1"><span class="text-[9px] font-bold text-black uppercase">Energy</span><span id="dim-energy" class="dimension-tag text-black">...</span></div>
                             </div>
                             <div class="pt-3 border-t border-gray-100">
                                 <div class="flex justify-between items-center mb-1"><p class="text-[9px] font-bold uppercase text-gray-400">Trust</p><span id="trust-level" class="text-[9px] font-bold text-black">0%</span></div>
@@ -157,9 +164,9 @@
                             <div id="intro-header" class="hidden bento-border bg-white rounded-t-2xl p-3 border-b-0 flex items-center justify-between">
                                 <div class="flex items-center gap-2 text-left">
                                     <div class="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold text-xs uppercase">S</div>
-                                    <h4 class="heading-font text-xs font-bold uppercase italic text-black">Intro: Sam</h4>
+                                    <h4 class="heading-font text-xs font-bold uppercase italic text-black font-bold">Dialogue: Sam</h4>
                                 </div>
-                                <button onclick="exitIntro()" class="text-[9px] font-bold uppercase text-gray-400 underline">Exit</button>
+                                <button onclick="exitIntro()" class="text-[9px] font-bold uppercase text-gray-400 underline">Exit Room</button>
                             </div>
                             <div id="chat-window" class="chat-container bento-border bg-white rounded-2xl p-4 mb-4 space-y-4"></div>
                             <div class="relative pb-2">
@@ -174,18 +181,18 @@
                         <div id="view-archive" class="hidden flex-1 overflow-y-auto space-y-4 text-left pb-10">
                             <div id="empty-collection" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 flex flex-col items-center justify-center text-center opacity-40">
                                 <p class="heading-font text-lg font-bold uppercase italic text-black">Collecting...</p>
-                                <p class="text-[10px] mt-2 uppercase font-bold tracking-widest leading-relaxed text-black">Scanning chapter for behavioral alignment.</p>
+                                <p class="text-[10px] mt-2 uppercase font-bold tracking-widest leading-relaxed text-black tracking-tight">Vetting the community for behavioral alignment.</p>
                             </div>
                             <div id="reveal-card" class="hidden reveal-card bento-border bg-white rounded-2xl p-5">
                                 <div class="flex justify-between items-start mb-4">
                                     <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center font-bold border-2 border-black text-black text-xl uppercase">S</div>
-                                    <span class="text-[9px] font-bold bg-emerald-400 px-2 py-1 rounded border border-black uppercase text-black">94% Fit</span>
+                                    <span class="text-[9px] font-bold bg-emerald-400 px-2 py-1 rounded border border-black uppercase text-black tracking-tighter tracking-tighter">94% Fit</span>
                                 </div>
                                 <h3 class="heading-font text-2xl font-bold uppercase italic leading-none text-black">Sam.</h3>
                                 <p id="match-reasoning" class="text-[11px] text-gray-600 mt-3 leading-relaxed italic"></p>
                                 <button id="intro-request-btn" onclick="requestIntro()" class="w-full corner-green border-2 border-black py-3 rounded-xl mt-6 font-bold uppercase tracking-widest text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 transition-all">Request Intro</button>
                                 <div id="invite-status" class="hidden mt-6 text-center p-3 border-2 border-black bg-gray-50 rounded-xl">
-                                    <p class="text-[9px] font-bold uppercase tracking-widest animate-pulse text-black">Requesting dialogue...</p>
+                                    <p class="text-[9px] font-bold uppercase tracking-widest animate-pulse text-black font-bold italic">Requesting dialogue...</p>
                                 </div>
                             </div>
                         </div>
@@ -207,21 +214,20 @@
         let chatHistory = [];
         
         const appId = 'collective-pilot-01';
-        let geminiApiKey = localStorage.getItem('collective_gemini_key');
-        let firebaseConfig = null;
-        try { firebaseConfig = JSON.parse(localStorage.getItem('collective_firebase_config')); } catch(e) {}
+        
+        const getKeys = () => ({
+            gemini: localStorage.getItem('collective_gemini_key'),
+            firebase: localStorage.getItem('collective_firebase_config')
+        });
 
         window.onload = () => {
-            setTimeout(() => {
-                if (document.getElementById('loading-view').style.display !== 'none') {
-                    document.getElementById('loading-timeout-msg').classList.remove('hidden');
-                }
-            }, 5000);
-
-            if (!firebaseConfig || !geminiApiKey) {
+            const keys = getKeys();
+            if (!keys.firebase || !keys.gemini) {
                 showOverlay('setup-view');
             } else {
-                bootApp(firebaseConfig);
+                try {
+                    bootApp(JSON.parse(keys.firebase));
+                } catch(e) { showOverlay('setup-view'); }
             }
         };
 
@@ -348,28 +354,42 @@
         }
 
         async function callGemini(msg) {
-            if (!geminiApiKey) return { error: "Missing API Key" };
-            const sys = `ROLE: The Collective Concierge. Sharp, extremely brief. 1-2 short sentences max. lowercase only. End with ${DATA_MARKER} {"status": "deduction", "tags": ["tag"], "trust": 0-100, "dimensions": {"communication": "...", "energy": "..."}, "matchReasoning": "IF trust >= 90, explain why Sam fits"}`;
+            const keys = getKeys();
+            if (!keys.gemini) return { error: "Missing API Key. Enter it in settings." };
+            
+            const sys = `ROLE: The Collective Concierge. Sharp, extremely brief. 1-2 short sentences max. End with ${DATA_MARKER} {"status": "deduction", "tags": ["tag"], "trust": 0-100, "dimensions": {"communication": "...", "energy": "..."}, "matchReasoning": "IF trust >= 90, why Sam fits"}`;
             const body = { contents: chatHistory.concat([{ role: "user", parts: [{ text: msg }] }]), systemInstruction: { parts: [{ text: sys }] }};
             
             try {
-                const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`, { 
+                const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keys.gemini}`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify(body) 
                 });
                 
                 if (!r.ok) {
-                    const errText = await r.text();
-                    return { error: `API Error ${r.status}: ${errText}` };
+                    const errObj = await r.json().catch(() => ({}));
+                    return { error: `API Error: ${errObj.error?.message || r.status}` };
                 }
-                
                 const j = await r.json(); 
-                return { text: j.candidates?.[0]?.content?.parts?.[0]?.text };
-            } catch(e) { 
-                return { error: `Network Error: ${e.message}` }; 
-            }
+                const text = j.candidates?.[0]?.content?.parts?.[0]?.text;
+                return text ? { text: text } : { error: "Empty AI response." };
+            } catch(e) { return { error: `Network Failure. Check connectivity.` }; }
         }
+
+        window.testConnection = async () => {
+            const btn = document.getElementById('test-connection-btn');
+            btn.innerText = "Testing...";
+            const res = await callGemini("test connection");
+            if (res.error) {
+                btn.innerText = "Failed: Check Key";
+                btn.classList.add('text-red-500');
+            } else {
+                btn.innerText = "Success: Brain Linked";
+                btn.classList.add('text-emerald-500');
+            }
+            setTimeout(() => { btn.innerText = "Test Connection"; btn.className = "w-full bg-gray-100 text-gray-500 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest mt-2 border border-gray-200"; }, 3000);
+        };
 
         async function handleSend() {
             const input = document.getElementById('user-input');
@@ -383,16 +403,11 @@
             
             const statusEl = document.getElementById('status');
             statusEl.classList.remove('hidden');
-            
             const res = await callGemini(text);
             statusEl.classList.add('hidden');
 
             if (res.error) {
-                await addDoc(col, { 
-                    role: 'model', 
-                    text: `concierge notice: i'm having trouble connecting to the brain. error: ${res.error}. tap the settings icon to check your api key.`, 
-                    timestamp: serverTimestamp() 
-                });
+                await addDoc(col, { role: 'system_error', text: `CONCIERGE ALERT: ${res.error}. Open settings to re-paste your Gemini key.`, timestamp: serverTimestamp() });
                 return;
             }
 
@@ -435,18 +450,29 @@
         window.openIntroChat = () => { inSharedSpace = true; document.getElementById('intro-header').classList.remove('hidden'); switchView('concierge'); const win = document.getElementById('chat-window'); win.innerHTML = `<div class="bg-white border italic p-4 rounded-2xl max-w-[85%] text-xs text-left text-black leading-relaxed tracking-tight">sam is here. i've brought you together because ${profile.matchReasoning || 'of a deep alignment.'} i'll let you two take it from here.</div>`; };
         window.exitIntro = async () => { inSharedSpace = false; document.getElementById('intro-header').classList.add('hidden'); loadProfile(); const col = collection(db, 'artifacts', appId, 'users', user.uid, 'messages'); await addDoc(col, { role: 'model', text: "welcome back. how was that dialogue?", timestamp: serverTimestamp() }); };
 
-        function renderChat(msgs) { const w = document.getElementById('chat-window'); if(!w) return; w.innerHTML = ''; msgs.forEach(m => { const d = document.createElement('div'); d.className = m.role === 'user' ? 'flex justify-end' : 'flex justify-start'; d.innerHTML = `<div class="${m.role === 'user' ? 'corner-green border-2 border-black font-bold shadow-[2px_2px_0px_#000]' : 'bg-white border italic'} p-3 rounded-xl max-w-[85%] text-[13px] text-left text-black tracking-tight">${m.text}</div>`; w.appendChild(d); }); w.scrollTop = w.scrollHeight; }
-        function appendShared(role, text) { const w = document.getElementById('chat-window'); if(!w) return; const d = document.createElement('div'); d.className = role === 'user' ? 'flex justify-end' : 'flex justify-start'; d.innerHTML = `<div class="${role === 'user' ? 'corner-green border-2 border-black font-bold shadow-[2px_2px_0px_#000]' : 'bg-white border'} p-3 rounded-xl max-w-[85%] text-[13px] text-left text-black tracking-tight">${text}</div>`; w.appendChild(d); w.scrollTop = w.scrollHeight; }
+        function renderChat(msgs) { 
+            const w = document.getElementById('chat-window'); if(!w) return; w.innerHTML = ''; 
+            msgs.forEach(m => { 
+                const d = document.createElement('div'); 
+                d.className = m.role === 'user' ? 'flex justify-end' : 'flex justify-start';
+                let styleClass = (m.role === 'user') ? 'msg-user' : (m.role === 'system_error' ? 'msg-error' : 'msg-ai');
+                d.innerHTML = `<div class="${styleClass} p-3 rounded-xl max-w-[85%] text-[13px] text-left tracking-tight">${m.text}</div>`; 
+                w.appendChild(d); 
+            }); 
+            w.scrollTop = w.scrollHeight; 
+        }
+
+        function appendShared(role, text) { 
+            const w = document.getElementById('chat-window'); if(!w) return; 
+            const d = document.createElement('div'); 
+            d.className = role === 'user' ? 'flex justify-end' : 'flex justify-start'; 
+            d.innerHTML = `<div class="${role === 'user' ? 'msg-user' : 'msg-ai'} p-3 rounded-xl max-w-[85%] text-[13px] text-left tracking-tight">${text}</div>`; 
+            w.appendChild(d); w.scrollTop = w.scrollHeight; 
+        }
         
         document.getElementById('profile-form').onsubmit = async (e) => { 
             e.preventDefault(); 
-            const p = { 
-                name: document.getElementById('p-name').value, 
-                age: document.getElementById('p-age').value, 
-                job: document.getElementById('p-job').value, 
-                trust: 0, 
-                createdAt: serverTimestamp() 
-            }; 
+            const p = { name: document.getElementById('p-name').value, age: document.getElementById('p-age').value, job: document.getElementById('p-job').value, trust: 0, createdAt: serverTimestamp() }; 
             await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), p); 
             loadProfile(); 
         };
