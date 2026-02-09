@@ -27,12 +27,16 @@
         #reveal-overlay { display: none; background: rgba(240, 240, 240, 0.98); z-index: 10000; }
         
         .dimension-tag { border: 1px solid #000; font-size: 9px; font-weight: bold; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
-        input, textarea { font-size: 16px !important; color: #000; background: #fff; } 
+        input, textarea { font-size: 16px !important; color: #000; background: #fff; border: 2px solid #000; border-radius: 12px; padding: 12px; } 
         
         /* Message Styles */
         .msg-user { background-color: #00FF66; border: 2px solid #000; font-weight: 700; box-shadow: 2px 2px 0px #000; }
         .msg-ai { background-color: #fff; border: 1px solid #ddd; font-style: italic; color: #000; }
         .msg-error { background-color: #fee2e2; border: 1px dashed #ef4444; color: #991b1b; font-size: 11px; font-weight: bold; margin: 10px 0; padding: 12px; border-radius: 12px; width: 100%; }
+        
+        .status-pill { font-size: 8px; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+        .status-ok { background: #00FF66; color: #000; }
+        .status-fail { background: #ef4444; color: #fff; }
     </style>
 </head>
 <body>
@@ -45,7 +49,7 @@
                 <div class="heading-font text-2xl font-bold uppercase italic animate-pulse mb-2">Connecting...</div>
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 uppercase">The Collective Concierge</p>
                 <div id="loading-timeout-msg" class="hidden">
-                    <button onclick="showOverlay('setup-view')" class="w-full bg-black text-white py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest">Manual Setup</button>
+                    <button onclick="showOverlay('setup-view')" class="w-full bg-black text-white py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-[3px_3px_0px_#00FF66]">Manual Setup</button>
                 </div>
             </div>
         </div>
@@ -66,26 +70,40 @@
             </div>
         </div>
 
+        <!-- REFINED SETUP VIEW -->
         <div id="setup-view">
             <div class="max-w-md mx-auto bento-border bg-white p-6 rounded-3xl w-full">
                 <div class="heading-font text-3xl font-bold tracking-tighter uppercase italic mb-6 text-center text-black">
                     the <span class="bg-black text-white px-2">collective.</span>
                 </div>
-                <h2 class="text-xl font-bold mb-4 italic uppercase tracking-tight text-center text-black">Cloud Setup</h2>
+                <h2 class="text-xl font-bold mb-2 italic uppercase tracking-tight text-center text-black leading-none">Cloud Setup</h2>
+                <p class="text-[9px] text-gray-400 mb-6 text-center uppercase font-bold tracking-tighter italic">Keys are stored locally on this device only</p>
+                
                 <div class="space-y-4">
                     <div>
-                        <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Gemini API Key</label>
-                        <input type="password" id="setup-gemini-key" placeholder="Paste Gemini Key..." class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[10px] font-bold uppercase text-gray-400">Gemini API Key</label>
+                            <span id="key-status" class="status-pill">Pending</span>
+                        </div>
+                        <input type="password" id="setup-gemini-key" placeholder="Starts with 'AIza...'" class="w-full focus:outline-none text-black">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Firebase Config</label>
-                        <textarea id="setup-firebase-config" rows="4" placeholder='Paste { "apiKey": "..." } object' class="w-full border-2 border-black rounded-xl p-3 text-xs font-mono focus:outline-none text-black"></textarea>
+                        <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Firebase Config (JSON)</label>
+                        <textarea id="setup-firebase-config" rows="4" placeholder='{ "apiKey": "...", ... }' class="w-full focus:outline-none text-black"></textarea>
                     </div>
-                    <button onclick="saveSetup()" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all">
-                        Initialize App
-                    </button>
-                    <button id="test-connection-btn" onclick="testConnection()" class="w-full bg-gray-100 text-gray-500 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest mt-2 border border-gray-200">Test Connection</button>
-                    <button onclick="showOverlay('none')" class="w-full text-[9px] font-bold uppercase text-gray-400 mt-4 underline">Back to App</button>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="saveSetup()" class="flex-1 corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all">
+                            Save & Launch
+                        </button>
+                    </div>
+                    
+                    <button id="test-connection-btn" onclick="testConnection()" class="w-full bg-gray-50 text-black py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest border-2 border-black">Test Connection</button>
+                    
+                    <div class="pt-4 border-t border-gray-100 flex justify-between gap-4">
+                        <button onclick="localStorage.clear(); location.reload();" class="text-[8px] font-bold uppercase text-red-400 underline">Wipe All Data</button>
+                        <button onclick="showOverlay('none')" class="text-[8px] font-bold uppercase text-gray-400 underline">Close Settings</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -103,16 +121,16 @@
                     <form id="profile-form" class="space-y-4 text-left">
                         <div>
                             <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Full Name</label>
-                            <input type="text" id="p-name" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black">
+                            <input type="text" id="p-name" required class="w-full focus:outline-none text-black">
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Age</label>
-                                <input type="number" id="p-age" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black">
+                                <input type="number" id="p-age" required class="w-full focus:outline-none text-black">
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Occupation</label>
-                                <input type="text" id="p-job" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none text-black">
+                                <input type="text" id="p-job" required class="w-full focus:outline-none text-black">
                             </div>
                         </div>
                         <button type="submit" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all mt-4">
@@ -126,14 +144,14 @@
             <div id="main-view" class="hidden h-full flex flex-col p-4">
                 <header class="flex justify-between items-start mb-4 gap-2">
                     <div class="text-left">
-                        <div class="heading-font text-xl font-bold tracking-tighter uppercase italic text-left text-black">
+                        <div class="heading-font text-xl font-bold tracking-tighter uppercase italic text-left text-black leading-none">
                             the <span class="bg-black text-white px-1">collective.</span>
                         </div>
                         <p id="user-display-name" class="text-[8px] font-bold uppercase tracking-widest text-gray-400 mt-1 italic text-left leading-none tracking-tighter">Syncing...</p>
                     </div>
                     <div class="flex gap-1 items-center">
-                        <button onclick="showOverlay('setup-view')" class="p-1.5 border-2 border-black rounded-lg bg-white shadow-[2px_2px_0px_#000] active:translate-y-0">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <button onclick="showOverlay('setup-view')" class="p-2 border-2 border-black rounded-lg bg-white shadow-[2px_2px_0px_#000] active:translate-y-0">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         </button>
                         <button id="view-concierge-btn" onclick="switchView('concierge')" class="nav-btn-active border-2 border-black px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all">Concierge</button>
                         <button id="view-archive-btn" onclick="switchView('archive')" class="bg-white border-2 border-black px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Matches</button>
@@ -148,8 +166,8 @@
                             <div id="vibe-tags" class="flex flex-wrap gap-1 mb-3"></div>
                             <p id="ai-deduction" class="text-[10px] italic leading-relaxed text-gray-500 mb-4 text-left">Waiting for first nuance...</p>
                             <div class="space-y-1 mb-4 border-t border-gray-100 pt-3 text-left">
-                                <div class="flex justify-between items-center"><span class="text-[9px] font-bold text-black uppercase">Comm</span><span id="dim-comm" class="dimension-tag text-black">...</span></div>
-                                <div class="flex justify-between items-center my-1"><span class="text-[9px] font-bold text-black uppercase">Energy</span><span id="dim-energy" class="dimension-tag text-black">...</span></div>
+                                <div class="flex justify-between items-center"><span class="text-[9px] font-bold text-black uppercase tracking-tighter">Comm</span><span id="dim-comm" class="dimension-tag text-black">...</span></div>
+                                <div class="flex justify-between items-center my-1"><span class="text-[9px] font-bold text-black uppercase tracking-tighter">Energy</span><span id="dim-energy" class="dimension-tag text-black">...</span></div>
                             </div>
                             <div class="pt-3 border-t border-gray-100">
                                 <div class="flex justify-between items-center mb-1"><p class="text-[9px] font-bold uppercase text-gray-400">Trust</p><span id="trust-level" class="text-[9px] font-bold text-black">0%</span></div>
@@ -168,25 +186,25 @@
                                 </div>
                                 <button onclick="exitIntro()" class="text-[9px] font-bold uppercase text-gray-400 underline">Exit Room</button>
                             </div>
-                            <div id="chat-window" class="chat-container bento-border bg-white rounded-2xl p-4 mb-4 space-y-4"></div>
+                            <div id="chat-window" class="chat-container bento-border bg-white rounded-2xl p-4 mb-4 space-y-4 shadow-inner"></div>
                             <div class="relative pb-2">
-                                <input type="text" id="user-input" class="w-full bento-border rounded-xl p-4 pr-14 focus:outline-none text-sm font-medium text-black bg-white" placeholder="say something sincere...">
+                                <input type="text" id="user-input" class="w-full rounded-xl p-4 pr-14 focus:outline-none text-sm font-medium text-black bg-white border-2 border-black" placeholder="say something sincere...">
                                 <button id="send-btn" class="absolute right-2 top-[calc(50%-4px)] -translate-y-1/2 corner-green p-3 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] active:translate-y-0 active:shadow-none transition-all">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                                 </button>
                             </div>
-                            <div id="status" class="text-[8px] font-bold uppercase text-gray-400 text-center hidden thinking mb-2">Concierge reflecting...</div>
+                            <div id="status" class="text-[8px] font-bold uppercase text-gray-400 text-center hidden thinking mb-2 italic">Concierge reflecting...</div>
                         </div>
 
                         <div id="view-archive" class="hidden flex-1 overflow-y-auto space-y-4 text-left pb-10">
                             <div id="empty-collection" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 flex flex-col items-center justify-center text-center opacity-40">
-                                <p class="heading-font text-lg font-bold uppercase italic text-black">Collecting...</p>
-                                <p class="text-[10px] mt-2 uppercase font-bold tracking-widest leading-relaxed text-black tracking-tight">Vetting the community for behavioral alignment.</p>
+                                <p class="heading-font text-lg font-bold uppercase italic text-black leading-none mb-1">Collecting...</p>
+                                <p class="text-[10px] uppercase font-bold tracking-widest leading-tight text-black tracking-tight italic">Analyzing chapter for alignment.</p>
                             </div>
                             <div id="reveal-card" class="hidden reveal-card bento-border bg-white rounded-2xl p-5">
                                 <div class="flex justify-between items-start mb-4">
                                     <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center font-bold border-2 border-black text-black text-xl uppercase">S</div>
-                                    <span class="text-[9px] font-bold bg-emerald-400 px-2 py-1 rounded border border-black uppercase text-black tracking-tighter tracking-tighter">94% Fit</span>
+                                    <span class="text-[9px] font-bold bg-emerald-400 px-2 py-1 rounded border border-black uppercase text-black tracking-tighter">94% Alignment</span>
                                 </div>
                                 <h3 class="heading-font text-2xl font-bold uppercase italic leading-none text-black">Sam.</h3>
                                 <p id="match-reasoning" class="text-[11px] text-gray-600 mt-3 leading-relaxed italic"></p>
@@ -239,20 +257,27 @@
             });
             if (viewId === 'setup-view' || viewId === 'error-view') {
                 document.getElementById('app-container').classList.add('hidden');
+                // Pre-fill fields in setup view
+                const keys = getKeys();
+                if (keys.gemini) document.getElementById('setup-gemini-key').value = keys.gemini;
+                if (keys.firebase) document.getElementById('setup-firebase-config').value = keys.firebase;
             }
         };
 
         window.saveSetup = () => {
             const key = document.getElementById('setup-gemini-key').value.trim();
             let configStr = document.getElementById('setup-firebase-config').value.trim();
-            if(!key || !configStr) return;
+            if(!key || !configStr) {
+                alert("Please paste both your Gemini Key and Firebase Config.");
+                return;
+            }
             try {
                 if (configStr.includes('{')) configStr = configStr.substring(configStr.indexOf('{'), configStr.lastIndexOf('}') + 1);
                 const configObj = new Function(`return ${configStr};`)();
                 localStorage.setItem('collective_gemini_key', key);
                 localStorage.setItem('collective_firebase_config', JSON.stringify(configObj));
                 location.reload();
-            } catch(e) { alert("Invalid config format."); }
+            } catch(e) { alert("Invalid Firebase Config format. Make sure it looks like { ... }"); }
         };
 
         async function bootApp(config) {
@@ -357,7 +382,7 @@
             const keys = getKeys();
             if (!keys.gemini) return { error: "Missing API Key. Enter it in settings." };
             
-            const sys = `ROLE: The Collective Concierge. Sharp, extremely brief. 1-2 short sentences max. End with ${DATA_MARKER} {"status": "deduction", "tags": ["tag"], "trust": 0-100, "dimensions": {"communication": "...", "energy": "..."}, "matchReasoning": "IF trust >= 90, why Sam fits"}`;
+            const sys = `ROLE: The Collective Concierge. Sharp, extremely brief. 1-2 short sentences max. lowercase only. MISSION: Behavioral vetting. Ask one question at a time. End with ${DATA_MARKER} {"status": "deduction", "tags": ["tag"], "trust": 0-100, "dimensions": {"communication": "...", "energy": "..."}, "matchReasoning": "IF trust >= 90, why Sam fits"}`;
             const body = { contents: chatHistory.concat([{ role: "user", parts: [{ text: msg }] }]), systemInstruction: { parts: [{ text: sys }] }};
             
             try {
@@ -369,7 +394,7 @@
                 
                 if (!r.ok) {
                     const errObj = await r.json().catch(() => ({}));
-                    return { error: `API Error: ${errObj.error?.message || r.status}` };
+                    return { error: `Gemini API Error: ${errObj.error?.message || r.status}` };
                 }
                 const j = await r.json(); 
                 const text = j.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -379,16 +404,25 @@
 
         window.testConnection = async () => {
             const btn = document.getElementById('test-connection-btn');
-            btn.innerText = "Testing...";
+            const statusPill = document.getElementById('key-status');
+            btn.innerText = "Verifying Key...";
+            
             const res = await callGemini("test connection");
             if (res.error) {
-                btn.innerText = "Failed: Check Key";
-                btn.classList.add('text-red-500');
+                btn.innerText = "FAILED: Check Gemini Key";
+                btn.style.color = "#ef4444";
+                statusPill.innerText = "Invalid";
+                statusPill.className = "status-pill status-fail";
             } else {
-                btn.innerText = "Success: Brain Linked";
-                btn.classList.add('text-emerald-500');
+                btn.innerText = "SUCCESS: Brain Linked";
+                btn.style.color = "#00FF66";
+                statusPill.innerText = "Active";
+                statusPill.className = "status-pill status-ok";
             }
-            setTimeout(() => { btn.innerText = "Test Connection"; btn.className = "w-full bg-gray-100 text-gray-500 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest mt-2 border border-gray-200"; }, 3000);
+            setTimeout(() => { 
+                btn.innerText = "Test Connection"; 
+                btn.style.color = "#000";
+            }, 4000);
         };
 
         async function handleSend() {
@@ -407,7 +441,11 @@
             statusEl.classList.add('hidden');
 
             if (res.error) {
-                await addDoc(col, { role: 'system_error', text: `CONCIERGE ALERT: ${res.error}. Open settings to re-paste your Gemini key.`, timestamp: serverTimestamp() });
+                await addDoc(col, { 
+                    role: 'system_error', 
+                    text: `SYSTEM NOTICE: ${res.error}. This usually means your Gemini Key is missing or invalid on this device. Click the gear icon top-right to fix.`, 
+                    timestamp: serverTimestamp() 
+                });
                 return;
             }
 
