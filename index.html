@@ -29,7 +29,6 @@
         .dimension-tag { border: 1px solid #000; font-size: 9px; font-weight: bold; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
         input, textarea { font-size: 16px !important; color: #000; background: #fff; border: 2px solid #000; border-radius: 12px; padding: 12px; } 
         
-        /* Message Styles */
         .msg-user { background-color: #00FF66; border: 2px solid #000; font-weight: 700; box-shadow: 2px 2px 0px #000; }
         .msg-ai { background-color: #fff; border: 1px solid #ddd; font-style: italic; color: #000; }
         .msg-error { background-color: #fee2e2; border: 1px dashed #ef4444; color: #991b1b; font-size: 11px; font-weight: bold; margin: 10px 0; padding: 12px; border-radius: 12px; width: 100%; }
@@ -70,39 +69,37 @@
             </div>
         </div>
 
-        <!-- REFINED SETUP VIEW -->
+        <!-- SETUP VIEW -->
         <div id="setup-view">
             <div class="max-w-md mx-auto bento-border bg-white p-6 rounded-3xl w-full">
                 <div class="heading-font text-3xl font-bold tracking-tighter uppercase italic mb-6 text-center text-black">
                     the <span class="bg-black text-white px-2">collective.</span>
                 </div>
                 <h2 class="text-xl font-bold mb-2 italic uppercase tracking-tight text-center text-black leading-none">Cloud Setup</h2>
-                <p class="text-[9px] text-gray-400 mb-6 text-center uppercase font-bold tracking-tighter italic">Keys are stored locally on this device only</p>
                 
                 <div class="space-y-4">
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-[10px] font-bold uppercase text-gray-400">Gemini API Key</label>
-                            <span id="key-status" class="status-pill">Pending</span>
+                            <span id="key-status" class="status-pill">Verify required</span>
                         </div>
                         <input type="password" id="setup-gemini-key" placeholder="Starts with 'AIza...'" class="w-full focus:outline-none text-black">
+                        <div id="key-fingerprint" class="text-[8px] text-gray-400 mt-1 uppercase font-bold">No key saved</div>
                     </div>
                     <div>
                         <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Firebase Config (JSON)</label>
                         <textarea id="setup-firebase-config" rows="4" placeholder='{ "apiKey": "...", ... }' class="w-full focus:outline-none text-black"></textarea>
                     </div>
                     
-                    <div class="flex gap-2">
-                        <button onclick="saveSetup()" class="flex-1 corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all">
-                            Save & Launch
-                        </button>
-                    </div>
+                    <button onclick="saveSetup()" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all">
+                        Update & Launch
+                    </button>
                     
-                    <button id="test-connection-btn" onclick="testConnection()" class="w-full bg-gray-50 text-black py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest border-2 border-black">Test Connection</button>
+                    <button id="test-connection-btn" onclick="testConnection()" class="w-full bg-gray-50 text-black py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest border-2 border-black shadow-[2px_2px_0px_#000] active:translate-y-0">Test connection</button>
                     
-                    <div class="pt-4 border-t border-gray-100 flex justify-between gap-4">
-                        <button onclick="localStorage.clear(); location.reload();" class="text-[8px] font-bold uppercase text-red-400 underline">Wipe All Data</button>
-                        <button onclick="showOverlay('none')" class="text-[8px] font-bold uppercase text-gray-400 underline">Close Settings</button>
+                    <div class="pt-4 border-t border-gray-100 flex flex-col gap-2">
+                        <button onclick="localStorage.removeItem('collective_gemini_key'); location.reload();" class="text-[8px] font-bold uppercase text-red-500 underline text-center">Clear Only API Key</button>
+                        <button onclick="showOverlay('none')" class="text-[8px] font-bold uppercase text-gray-400 text-center underline mt-2">Back to Chat</button>
                     </div>
                 </div>
             </div>
@@ -159,7 +156,6 @@
                 </header>
 
                 <div class="flex-1 flex flex-col md:grid md:grid-cols-12 md:gap-8 overflow-hidden">
-                    <!-- Sidebar -->
                     <div id="soul-sidebar" class="hidden md:block md:col-span-4 space-y-4 mb-4 overflow-y-auto">
                         <div class="bento-border bg-white rounded-2xl p-4">
                             <h2 class="heading-font text-xs font-bold uppercase italic mb-3 text-black">Soul Profile</h2>
@@ -176,7 +172,6 @@
                         </div>
                     </div>
 
-                    <!-- Chat & Archive -->
                     <div class="flex-1 flex flex-col md:col-span-8 overflow-hidden">
                         <div id="view-concierge" class="flex-1 flex flex-col overflow-hidden">
                             <div id="intro-header" class="hidden bento-border bg-white rounded-t-2xl p-3 border-b-0 flex items-center justify-between">
@@ -233,12 +228,19 @@
         
         const appId = 'collective-pilot-01';
         
-        const getKeys = () => ({
-            gemini: localStorage.getItem('collective_gemini_key'),
-            firebase: localStorage.getItem('collective_firebase_config')
-        });
+        // Key Accessor with high-precision cleaning
+        const getKeys = () => {
+            const rawGemini = localStorage.getItem('collective_gemini_key') || "";
+            // Clean the key: remove spaces, line breaks, and non-printable characters
+            const cleanGemini = rawGemini.replace(/[\s\t\n\r]/g, '').trim();
+            return {
+                gemini: cleanGemini,
+                firebase: localStorage.getItem('collective_firebase_config')
+            };
+        };
 
         window.onload = () => {
+            updateKeyFingerprint();
             const keys = getKeys();
             if (!keys.firebase || !keys.gemini) {
                 showOverlay('setup-view');
@@ -249,6 +251,16 @@
             }
         };
 
+        function updateKeyFingerprint() {
+            const keys = getKeys();
+            const el = document.getElementById('key-fingerprint');
+            if (keys.gemini && keys.gemini.length > 5) {
+                el.innerText = `Key: ${keys.gemini.length} chars | Ends in ...${keys.gemini.slice(-4)}`;
+            } else {
+                el.innerText = "No key saved";
+            }
+        }
+
         window.showOverlay = (viewId) => {
             const overlays = ['loading-view', 'setup-view', 'error-view', 'reveal-overlay'];
             overlays.forEach(id => {
@@ -257,15 +269,18 @@
             });
             if (viewId === 'setup-view' || viewId === 'error-view') {
                 document.getElementById('app-container').classList.add('hidden');
-                // Pre-fill fields in setup view
                 const keys = getKeys();
                 if (keys.gemini) document.getElementById('setup-gemini-key').value = keys.gemini;
                 if (keys.firebase) document.getElementById('setup-firebase-config').value = keys.firebase;
+                updateKeyFingerprint();
             }
         };
 
         window.saveSetup = () => {
-            const key = document.getElementById('setup-gemini-key').value.trim();
+            let key = document.getElementById('setup-gemini-key').value.trim();
+            // Aggressive cleaning for iPhone paste issues
+            key = key.replace(/[\s\t\n\r]/g, '');
+            
             let configStr = document.getElementById('setup-firebase-config').value.trim();
             if(!key || !configStr) {
                 alert("Please paste both your Gemini Key and Firebase Config.");
@@ -276,8 +291,9 @@
                 const configObj = new Function(`return ${configStr};`)();
                 localStorage.setItem('collective_gemini_key', key);
                 localStorage.setItem('collective_firebase_config', JSON.stringify(configObj));
+                updateKeyFingerprint();
                 location.reload();
-            } catch(e) { alert("Invalid Firebase Config format. Make sure it looks like { ... }"); }
+            } catch(e) { alert("Invalid Firebase Config format."); }
         };
 
         async function bootApp(config) {
@@ -380,9 +396,9 @@
 
         async function callGemini(msg) {
             const keys = getKeys();
-            if (!keys.gemini) return { error: "Missing API Key. Enter it in settings." };
+            if (!keys.gemini) return { error: "Missing API Key. Check settings." };
             
-            const sys = `ROLE: The Collective Concierge. Sharp, extremely brief. 1-2 short sentences max. lowercase only. MISSION: Behavioral vetting. Ask one question at a time. End with ${DATA_MARKER} {"status": "deduction", "tags": ["tag"], "trust": 0-100, "dimensions": {"communication": "...", "energy": "..."}, "matchReasoning": "IF trust >= 90, why Sam fits"}`;
+            const sys = `ROLE: The Collective Concierge. Sharp, extremely brief. 1-2 short sentences max. MISSION: Behavioral vetting. Ask one question at a time. End with ${DATA_MARKER} {"status": "deduction", "tags": ["tag"], "trust": 0-100, "dimensions": {"communication": "...", "energy": "..."}, "matchReasoning": "IF trust >= 90, why Sam fits"}`;
             const body = { contents: chatHistory.concat([{ role: "user", parts: [{ text: msg }] }]), systemInstruction: { parts: [{ text: sys }] }};
             
             try {
@@ -394,27 +410,28 @@
                 
                 if (!r.ok) {
                     const errObj = await r.json().catch(() => ({}));
-                    return { error: `Gemini API Error: ${errObj.error?.message || r.status}` };
+                    return { error: `${errObj.error?.message || r.status}` };
                 }
                 const j = await r.json(); 
                 const text = j.candidates?.[0]?.content?.parts?.[0]?.text;
-                return text ? { text: text } : { error: "Empty AI response." };
-            } catch(e) { return { error: `Network Failure. Check connectivity.` }; }
+                return text ? { text: text } : { error: "Empty response." };
+            } catch(e) { return { error: `Network Failure.` }; }
         }
 
         window.testConnection = async () => {
             const btn = document.getElementById('test-connection-btn');
             const statusPill = document.getElementById('key-status');
-            btn.innerText = "Verifying Key...";
+            btn.innerText = "Cleaning & Verifying...";
             
             const res = await callGemini("test connection");
             if (res.error) {
-                btn.innerText = "FAILED: Check Gemini Key";
+                btn.innerText = "FAILED: Key still invalid";
                 btn.style.color = "#ef4444";
                 statusPill.innerText = "Invalid";
                 statusPill.className = "status-pill status-fail";
+                console.error("Gemini Error Details:", res.error);
             } else {
-                btn.innerText = "SUCCESS: Brain Linked";
+                btn.innerText = "SUCCESS: Linked";
                 btn.style.color = "#00FF66";
                 statusPill.innerText = "Active";
                 statusPill.className = "status-pill status-ok";
@@ -443,7 +460,7 @@
             if (res.error) {
                 await addDoc(col, { 
                     role: 'system_error', 
-                    text: `SYSTEM NOTICE: ${res.error}. This usually means your Gemini Key is missing or invalid on this device. Click the gear icon top-right to fix.`, 
+                    text: `CONCIERGE NOTICE: ${res.error}. tap settings icon to check your key.`, 
                     timestamp: serverTimestamp() 
                 });
                 return;
