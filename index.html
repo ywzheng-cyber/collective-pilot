@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Collective | Unified Cloud Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F0F0F0; color: #000; overflow-x: hidden; height: 100%; position: fixed; width: 100%; }
+        .heading-font { font-family: 'Space Grotesk', sans-serif; }
+        .corner-green { background-color: #00FF66; }
+        .bento-border { border: 2px solid #000; box-shadow: 4px 4px 0px #000; }
+        
+        /* Mobile height fix for Safari */
+        .app-viewport { height: 100dvh; display: flex; flex-direction: column; }
+        .chat-container { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        
+        .nav-btn-active { background-color: #000; color: #fff; transform: translateY(-2px); box-shadow: 4px 4px 0px #00FF66; }
+        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .thinking { animation: pulse-soft 2s infinite; }
+        .reveal-card { animation: slide-up 0.5s ease-out forwards; }
+        @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .shared-room-active { border-color: #00FF66 !important; background-color: #FAFFFB !important; }
+        
+        #loading-view, #setup-view, #error-view, #reveal-overlay { position: fixed; inset: 0; background: #F0F0F0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        #setup-view { display: none; overflow-y: auto; align-items: flex-start; padding-top: 40px; }
+        #reveal-overlay { display: none; background: rgba(240, 240, 240, 0.95); z-index: 10000; }
+        
+        .dimension-tag { border: 1px solid #000; font-size: 9px; font-weight: bold; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="app-viewport p-4 md:p-8">
+        
+        <!-- OVERLAYS -->
+        <div id="loading-view">
+            <div class="text-center">
+                <div class="heading-font text-2xl font-bold uppercase italic animate-pulse mb-2">Connecting...</div>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">The Collective Concierge</p>
+            </div>
+        </div>
+
+        <div id="reveal-overlay">
+            <div class="text-center max-w-sm">
+                <div class="heading-font text-4xl font-bold uppercase italic mb-4 leading-none">Vibe Check <br/>Complete.</div>
+                <p class="text-sm italic text-gray-600 mb-8">A high-conviction alignment has been identified.</p>
+                <button onclick="dismissReveal()" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">Enter the Collection</button>
+            </div>
+        </div>
+
+        <div id="error-view" class="hidden text-left">
+            <div class="max-w-md w-full bento-border bg-white p-8 rounded-3xl">
+                <div class="heading-font text-3xl font-bold text-red-500 uppercase italic mb-4">Connection Failed</div>
+                <p class="text-xs font-bold uppercase text-gray-400 mb-2">Technical Error:</p>
+                <div id="error-details" class="bg-red-50 p-4 rounded-xl font-mono text-[10px] text-red-800 mb-6 break-all">Initializing...</div>
+                <button onclick="localStorage.clear(); location.reload();" class="w-full bg-black text-white py-4 rounded-xl font-bold uppercase text-xs shadow-[4px_4px_0px_#00FF66]">Reset & Try Again</button>
+            </div>
+        </div>
+
+        <div id="setup-view">
+            <div class="max-w-md mx-auto bento-border bg-white p-8 rounded-3xl">
+                <div class="heading-font text-3xl font-bold tracking-tighter uppercase italic mb-6 text-center">
+                    the <span class="bg-black text-white px-2">collective.</span>
+                </div>
+                <h2 class="text-xl font-bold mb-4 italic uppercase tracking-tight text-center">Cloud Setup</h2>
+                <p class="text-[10px] text-gray-400 mb-6 text-center uppercase font-bold tracking-tighter">Enter keys to unlock the mobile pilot</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Gemini API Key</label>
+                        <input type="password" id="setup-gemini-key" placeholder="Paste key..." class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Firebase Config (JSON)</label>
+                        <textarea id="setup-firebase-config" rows="4" placeholder='Paste { ... } object' class="w-full border-2 border-black rounded-xl p-3 text-xs font-mono focus:outline-none"></textarea>
+                    </div>
+                    <button onclick="saveSetup()" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all">
+                        Initialize App
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN INTERFACE -->
+        <div id="app-container" class="max-w-5xl mx-auto w-full h-full flex flex-col">
+            
+            <!-- ONBOARDING -->
+            <div id="onboarding-view" class="hidden max-w-md mx-auto py-6 text-center w-full">
+                <div class="bento-border bg-white rounded-3xl p-6">
+                    <div class="heading-font text-2xl font-bold tracking-tighter uppercase italic mb-6">
+                        the <span class="bg-black text-white px-2">collective.</span>
+                    </div>
+                    <h2 class="text-lg font-bold mb-6 italic uppercase tracking-tight">Create your member profile</h2>
+                    <form id="profile-form" class="space-y-4 text-left">
+                        <div>
+                            <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Full Name</label>
+                            <input type="text" id="p-name" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Age</label>
+                                <input type="number" id="p-age" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Occupation</label>
+                                <input type="text" id="p-job" required class="w-full border-2 border-black rounded-xl p-3 text-sm focus:outline-none">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full corner-green border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 translate-y-[-2px] transition-all mt-4">
+                            Establish Connection
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- APP CONTENT -->
+            <div id="main-view" class="hidden h-full flex flex-col">
+                <header class="flex justify-between items-start mb-4 gap-4">
+                    <div>
+                        <div class="heading-font text-2xl font-bold tracking-tighter uppercase italic text-left">
+                            the <span class="bg-black text-white px-1">collective.</span>
+                        </div>
+                        <p id="user-display-name" class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mt-1 italic text-left leading-none">Connecting...</p>
+                    </div>
+                    <div class="flex gap-1">
+                        <button id="view-concierge-btn" onclick="switchView('concierge')" class="nav-btn-active border-2 border-black px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all">Concierge</button>
+                        <button id="view-archive-btn" onclick="switchView('archive')" class="bg-white border-2 border-black px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">Matches</button>
+                    </div>
+                </header>
+
+                <div class="flex-1 flex flex-col md:grid md:grid-cols-12 md:gap-8 overflow-hidden">
+                    <!-- Sidebar (Hidden on mobile chat, shown on match) -->
+                    <div id="soul-sidebar" class="hidden md:block md:col-span-4 space-y-4 mb-4 md:mb-0">
+                        <div class="bento-border bg-white rounded-2xl p-4">
+                            <h2 class="heading-font text-sm font-bold uppercase italic mb-3">Soul Profile</h2>
+                            <div id="vibe-tags" class="flex flex-wrap gap-1 mb-3"></div>
+                            <div class="space-y-1 mb-4 border-t border-gray-100 pt-3 text-left">
+                                <div class="flex justify-between items-center"><span class="text-[9px] font-bold">Comm</span><span id="dim-comm" class="dimension-tag">...</span></div>
+                                <div class="flex justify-between items-center"><span class="text-[9px] font-bold">Energy</span><span id="dim-energy" class="dimension-tag">...</span></div>
+                            </div>
+                            <div class="pt-3 border-t border-gray-100">
+                                <div class="flex justify-between items-center mb-1"><p class="text-[9px] font-bold uppercase text-gray-400">Trust</p><span id="trust-level" class="text-[9px] font-bold">0%</span></div>
+                                <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden border border-black"><div id="trust-bar" class="corner-green h-full w-0 transition-all duration-1000"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat & Archive -->
+                    <div class="flex-1 flex flex-col md:col-span-8 overflow-hidden">
+                        <div id="view-concierge" class="flex-1 flex flex-col overflow-hidden">
+                            <div id="intro-header" class="hidden bento-border bg-white rounded-t-2xl p-3 border-b-0 flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-left">
+                                    <div class="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold text-xs">S</div>
+                                    <h4 class="heading-font text-xs font-bold uppercase italic">Intro: Sam</h4>
+                                </div>
+                                <button onclick="exitIntro()" class="text-[9px] font-bold uppercase text-gray-400">Exit</button>
+                            </div>
+                            <div id="chat-window" class="chat-container bento-border bg-white rounded-2xl p-4 mb-4 space-y-4"></div>
+                            <div class="relative pb-2">
+                                <input type="text" id="user-input" class="w-full bento-border rounded-xl p-4 pr-14 focus:outline-none text-sm font-medium" placeholder="say something sincere...">
+                                <button id="send-btn" class="absolute right-2 top-[calc(50%-4px)] -translate-y-1/2 corner-green p-3 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] active:translate-y-0 active:shadow-none">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                </button>
+                            </div>
+                            <div id="status" class="text-[8px] font-bold uppercase text-gray-400 text-center hidden thinking mb-2">Concierge reflecting...</div>
+                        </div>
+
+                        <div id="view-archive" class="hidden flex-1 overflow-y-auto space-y-4 text-left pb-10">
+                            <div id="empty-collection" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 flex flex-col items-center justify-center text-center opacity-40">
+                                <p class="heading-font text-lg font-bold uppercase italic">Collecting...</p>
+                                <p class="text-[10px] mt-2 uppercase font-bold tracking-widest">Complete your vibe check to unlock matches.</p>
+                            </div>
+                            <div id="reveal-card" class="hidden reveal-card bento-border bg-white rounded-2xl p-5">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center font-bold border-2 border-black">S</div>
+                                    <span class="text-[9px] font-bold bg-emerald-400 px-2 py-1 rounded border border-black uppercase">94% Fit</span>
+                                </div>
+                                <h3 class="heading-font text-2xl font-bold uppercase italic leading-none">Sam.</h3>
+                                <p id="match-reasoning" class="text-[11px] text-gray-600 mt-3 leading-relaxed italic"></p>
+                                <button id="intro-request-btn" onclick="requestIntro()" class="w-full corner-green border-2 border-black py-3 rounded-xl mt-6 font-bold uppercase tracking-widest text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">Request Intro</button>
+                                <div id="invite-status" class="hidden mt-6 text-center p-3 border-2 border-black bg-gray-50 rounded-xl">
+                                    <p class="text-[9px] font-bold uppercase tracking-widest animate-pulse">Requesting dialogue...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { initializeFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const DATA_MARKER = "@@@VIBE_DATA@@@";
+        let firebaseApp, auth, db, user, profile;
+        let inSharedSpace = false;
+        let hasTriggeredReveal = false;
+        let chatHistory = [];
+        
+        const appId = 'collective-pilot-01';
+        let geminiApiKey = localStorage.getItem('collective_gemini_key');
+        let firebaseConfig = null;
+        try { firebaseConfig = JSON.parse(localStorage.getItem('collective_firebase_config')); } catch(e) {}
+
+        window.onload = () => {
+            if (!firebaseConfig || !geminiApiKey) {
+                showOverlay('setup-view');
+            } else {
+                bootApp(firebaseConfig);
+            }
+        };
+
+        function showOverlay(viewId) {
+            const views = ['loading-view', 'setup-view', 'onboarding-view', 'main-view', 'error-view'];
+            views.forEach(v => {
+                const el = document.getElementById(v);
+                if (el) {
+                    el.style.display = (v === viewId) ? (v.includes('view') && !v.includes('onboarding') && !v.includes('main') ? 'flex' : 'flex') : 'none';
+                    if (v !== viewId) el.classList.add('hidden');
+                    else el.classList.remove('hidden');
+                }
+            });
+        }
+
+        window.saveSetup = () => {
+            const key = document.getElementById('setup-gemini-key').value.trim();
+            let configStr = document.getElementById('setup-firebase-config').value.trim();
+            if(!key || !configStr) return;
+            try {
+                if (configStr.includes('{')) configStr = configStr.substring(configStr.indexOf('{'), configStr.lastIndexOf('}') + 1);
+                const configObj = new Function(`return ${configStr};`)();
+                localStorage.setItem('collective_gemini_key', key);
+                localStorage.setItem('collective_firebase_config', JSON.stringify(configObj));
+                location.reload();
+            } catch(e) { alert("Invalid config."); }
+        };
+
+        async function bootApp(config) {
+            try {
+                firebaseApp = initializeApp(config);
+                auth = getAuth(firebaseApp);
+                db = initializeFirestore(firebaseApp, { experimentalForceLongPolling: true });
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, (u) => { if (u) { user = u; loadProfile(); } });
+            } catch (err) { document.getElementById('error-details').innerText = err.message; showOverlay('error-view'); }
+        }
+
+        async function loadProfile() {
+            try {
+                const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main');
+                const snap = await getDoc(ref);
+                if (snap.exists()) {
+                    profile = snap.data();
+                    updateUI(profile);
+                    showOverlay('main-view');
+                    document.getElementById('user-display-name').innerText = `${profile.name} • ${profile.job}`;
+                    setupListener();
+                } else { showOverlay('onboarding-view'); }
+            } catch(err) { document.getElementById('error-details').innerText = err.message; showOverlay('error-view'); }
+        }
+
+        function setupListener() {
+            const col = collection(db, 'artifacts', appId, 'users', user.uid, 'messages');
+            onSnapshot(col, (snap) => {
+                const msgs = [];
+                snap.forEach(d => msgs.push(d.data()));
+                msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+                chatHistory = msgs.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
+                renderChat(msgs);
+            });
+        }
+
+        function updateUI(data) {
+            if (data.vibeStatus) document.getElementById('ai-deduction').innerText = data.vibeStatus;
+            if (typeof data.trust !== 'undefined') {
+                const t = data.trust;
+                document.getElementById('trust-bar').style.width = t + '%';
+                document.getElementById('trust-level').innerText = t + '%';
+                const box = document.getElementById('club-status-box');
+                if (t >= 90) {
+                    document.getElementById('match-count').innerText = "Match Ready!";
+                    box.classList.add('unlock-ready'); box.style.cursor = 'pointer';
+                    if (!hasTriggeredReveal) { document.getElementById('reveal-overlay').style.display = 'flex'; hasTriggeredReveal = true; }
+                }
+            }
+            if (data.dimensions) {
+                if (data.dimensions.communication) document.getElementById('dim-comm').innerText = data.dimensions.communication;
+                if (data.dimensions.energy) document.getElementById('dim-energy').innerText = data.dimensions.energy;
+            }
+            if (data.tags) {
+                const c = document.getElementById('vibe-tags'); c.innerHTML = '';
+                data.tags.forEach(t => { const s = document.createElement('span'); s.className = "text-[8px] bg-black text-white px-2 py-0.5 rounded font-bold uppercase italic mr-1 mb-1 tracking-tighter"; s.innerText = t; c.appendChild(s); });
+            }
+            if (data.matchReasoning) {
+                document.getElementById('match-reasoning').innerText = data.matchReasoning;
+                document.getElementById('reveal-card').classList.remove('hidden');
+                document.getElementById('empty-collection').classList.add('hidden');
+            }
+            if (data.inviteSent) {
+                document.getElementById('intro-request-btn').classList.add('hidden');
+                document.getElementById('invite-status').classList.remove('hidden');
+                setTimeout(() => { document.getElementById('invite-status').innerHTML = '<p class="text-[9px] font-bold uppercase tracking-widest text-emerald-600">Sam accepted.</p><button onclick="openIntroChat()" class="mt-2 w-full bg-black text-white py-2 rounded-lg text-[9px] font-bold uppercase shadow-[2px_2px_0px_#00FF66]">Enter Dialogue</button>'; }, 2000);
+            }
+        }
+
+        async function callGemini(msg) {
+            const sys = `ROLE: The Collective Concierge. Sharp, extremely minimalist. 1-2 short sentences max. lowercase only. End with ${DATA_MARKER} {"status": "deduction", "tags": ["tag"], "trust": 0-100, "dimensions": {"communication": "...", "energy": "..."}, "matchReasoning": "IF trust >= 90, explain why Sam fits"}`;
+            const body = { contents: chatHistory.concat([{ role: "user", parts: [{ text: msg }] }]), systemInstruction: { parts: [{ text: sys }] }};
+            try {
+                const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const j = await r.json(); return j.candidates?.[0]?.content?.parts?.[0]?.text;
+            } catch(e) { return null; }
+        }
+
+        async function handleSend() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text || !user || !db) return;
+            if (inSharedSpace) { appendShared('user', text); input.value = ''; return; }
+            input.value = '';
+            const col = collection(db, 'artifacts', appId, 'users', user.uid, 'messages');
+            await addDoc(col, { role: 'user', text: text, timestamp: serverTimestamp() });
+            document.getElementById('status').classList.remove('hidden');
+            const res = await callGemini(text);
+            document.getElementById('status').classList.add('hidden');
+            if (res) {
+                const parts = res.split(DATA_MARKER);
+                await addDoc(col, { role: 'model', text: parts[0].trim(), timestamp: serverTimestamp() });
+                if (parts[1]) {
+                    try {
+                        const json = JSON.parse(parts[1].trim());
+                        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), { vibeStatus: json.status, trust: json.trust, tags: json.tags, dimensions: json.dimensions || {}, matchReasoning: json.matchReasoning }, { merge: true });
+                        loadProfile();
+                    } catch(e) {}
+                }
+            }
+        }
+
+        window.requestIntro = async () => {
+            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), { inviteSent: true }, { merge: true });
+            loadProfile();
+        };
+
+        window.dismissReveal = () => { document.getElementById('reveal-overlay').style.display = 'none'; switchView('archive'); };
+        window.switchView = (v) => {
+            const c = document.getElementById('view-concierge'), a = document.getElementById('view-archive');
+            const bc = document.getElementById('view-concierge-btn'), ba = document.getElementById('view-archive-btn');
+            if (v === 'concierge') { c.classList.remove('hidden'); a.classList.add('hidden'); bc.classList.add('nav-btn-active'); ba.classList.remove('nav-btn-active'); }
+            else { c.classList.add('hidden'); a.classList.remove('hidden'); ba.classList.add('nav-btn-active'); bc.classList.remove('nav-btn-active'); }
+        };
+
+        window.openIntroChat = () => { inSharedSpace = true; document.getElementById('intro-header').classList.remove('hidden'); switchView('concierge'); const win = document.getElementById('chat-window'); win.classList.add('rounded-t-none', 'shared-room-active'); win.innerHTML = `<div class="bg-white border italic p-4 rounded-2xl max-w-[85%] text-sm text-left text-black tracking-tight leading-relaxed">sam is here. i've brought you together because ${profile.matchReasoning || 'of a deep alignment.'} i'll let you two take it from here.</div>`; };
+        window.exitIntro = async () => { inSharedSpace = false; document.getElementById('intro-header').classList.add('hidden'); document.getElementById('chat-window').classList.remove('rounded-t-none', 'shared-room-active'); loadProfile(); const col = collection(db, 'artifacts', appId, 'users', user.uid, 'messages'); await addDoc(col, { role: 'model', text: "welcome back. how did that dialogue with sam feel?", timestamp: serverTimestamp() }); };
+
+        function renderChat(msgs) { const w = document.getElementById('chat-window'); w.innerHTML = ''; msgs.forEach(m => { const d = document.createElement('div'); d.className = m.role === 'user' ? 'flex justify-end' : 'flex justify-start'; d.innerHTML = `<div class="${m.role === 'user' ? 'corner-green border-2 border-black font-bold shadow-[2px_2px_0px_#000]' : 'bg-white border italic leading-relaxed'} p-3 rounded-xl max-w-[85%] text-[13px] text-left text-black tracking-tight">${m.text}</div>`; w.appendChild(d); }); w.scrollTop = w.scrollHeight; }
+        function appendShared(role, text) { const w = document.getElementById('chat-window'); const d = document.createElement('div'); d.className = role === 'user' ? 'flex justify-end' : 'flex justify-start'; d.innerHTML = `<div class="${role === 'user' ? 'corner-green border-2 border-black font-bold shadow-[2px_2px_0px_#000]' : 'bg-white border'} p-3 rounded-xl max-w-[85%] text-[13px] text-left text-black tracking-tight">${text}</div>`; w.appendChild(d); w.scrollTop = w.scrollHeight; }
+        document.getElementById('profile-form').onsubmit = async (e) => { e.preventDefault(); const p = { name: document.getElementById('p-name').value, age: document.getElementById('p-age').value, job: document.getElementById('p-job').value, trust: 0, vibeStatus: "Authenticating...", dimensions: { communication: 'Vetting...', energy: 'Vetting...' }, createdAt: serverTimestamp() }; await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main'), p); loadProfile(); };
+        window.resetSession = () => { if(confirm("Wipe local data?")) { localStorage.clear(); location.reload(); }};
+        document.getElementById('send-btn').onclick = handleSend;
+        document.getElementById('user-input').onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
+    </script>
+</body>
+</html>
